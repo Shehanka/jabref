@@ -26,7 +26,6 @@ import javafx.scene.control.ButtonType;
 import org.jabref.gui.AbstractViewModel;
 import org.jabref.gui.DialogService;
 import org.jabref.gui.desktop.JabRefDesktop;
-import org.jabref.gui.externalfiles.DownloadExternalFile;
 import org.jabref.gui.externalfiles.FileDownloadTask;
 import org.jabref.gui.externalfiletype.ExternalFileType;
 import org.jabref.gui.externalfiletype.ExternalFileTypes;
@@ -38,6 +37,7 @@ import org.jabref.gui.util.TaskExecutor;
 import org.jabref.logic.externalfiles.LinkedFileHandler;
 import org.jabref.logic.l10n.Localization;
 import org.jabref.logic.net.URLDownload;
+import org.jabref.logic.util.io.FileUtil;
 import org.jabref.logic.xmp.XmpPreferences;
 import org.jabref.logic.xmp.XmpUtilWriter;
 import org.jabref.model.database.BibDatabaseContext;
@@ -345,7 +345,6 @@ public class LinkedFileViewModel extends AbstractViewModel {
     }
 
     public void edit() {
-
         LinkedFileEditDialogView dialog = new LinkedFileEditDialogView(this.linkedFile);
 
         Optional<LinkedFile> editedFile = dialog.showAndWait();
@@ -353,6 +352,17 @@ public class LinkedFileViewModel extends AbstractViewModel {
             this.linkedFile.setLink(file.getLink());
             this.linkedFile.setDescription(file.getDescription());
             this.linkedFile.setFileType(file.getFileType());
+        });
+    }
+
+    public void renameFile() {
+        String oldFile = this.linkedFile.getLink();
+        Path oldFilePath = Paths.get(oldFile);
+        Optional<String> editedFile = dialogService.showInputDialogWithDefaultAndWait(Localization.lang("Rename file"), Localization.lang("New Filename"), oldFilePath.getFileName().toString());
+        editedFile.ifPresent(file -> {
+            Path newFile = Paths.get(oldFile).resolveSibling(file);
+            this.linkedFile.setLink(newFile.toString());
+            FileUtil.renameFile(Paths.get(oldFile), newFile);
         });
     }
 
@@ -439,12 +449,8 @@ public class LinkedFileViewModel extends AbstractViewModel {
     }
 
     private Optional<ExternalFileType> inferFileTypeFromURL(String url) {
-        String extension = DownloadExternalFile.getSuffix(url);
-        if (extension != null) {
-            return ExternalFileTypes.getInstance().getExternalFileTypeByExt(extension);
-        } else {
-            return Optional.empty();
-        }
+        return URLUtil.getSuffix(url)
+                      .flatMap(extension -> ExternalFileTypes.getInstance().getExternalFileTypeByExt(extension));
     }
 
     public LinkedFile getFile() {

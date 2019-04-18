@@ -36,6 +36,7 @@ import org.jabref.gui.keyboard.KeyBinding;
 import org.jabref.gui.keyboard.KeyBindingRepository;
 import org.jabref.gui.undo.NamedCompound;
 import org.jabref.gui.undo.UndoableInsertEntry;
+import org.jabref.gui.util.BindingsHelper;
 import org.jabref.gui.util.CustomLocalDragboard;
 import org.jabref.gui.util.ViewModelTableRowFactory;
 import org.jabref.logic.l10n.Localization;
@@ -83,17 +84,17 @@ public class MainTable extends TableView<BibEntryTableViewModel> {
         this.getColumns().addAll(new MainTableColumnFactory(database, preferences.getColumnPreferences(), externalFileTypes, panel.getUndoManager(), frame.getDialogService()).createColumns());
 
         new ViewModelTableRowFactory<BibEntryTableViewModel>()
-                                                              .withOnMouseClickedEvent((entry, event) -> {
+                .withOnMouseClickedEvent((entry, event) -> {
                                                                   if (event.getClickCount() == 2) {
                                                                       panel.showAndEdit(entry.getEntry());
                                                                   }
                                                               })
-                                                              .withContextMenu(entry -> RightClickMenu.create(entry, keyBindingRepository, panel, Globals.getKeyPrefs(), frame.getDialogService()))
-                                                              .setOnDragDetected(this::handleOnDragDetected)
-                                                              .setOnDragDropped(this::handleOnDragDropped)
-                                                              .setOnDragOver(this::handleOnDragOver)
-                                                              .setOnMouseDragEntered(this::handleOnDragEntered)
-                                                              .install(this);
+                .withContextMenu(entry -> RightClickMenu.create(entry, keyBindingRepository, panel, frame.getDialogService()))
+                .setOnDragDetected(this::handleOnDragDetected)
+                .setOnDragDropped(this::handleOnDragDropped)
+                .setOnDragOver(this::handleOnDragOver)
+                .setOnMouseDragEntered(this::handleOnDragEntered)
+                .install(this);
 
         /*for (Entry<String, SortType> entries : preferences.getColumnPreferences().getSortTypesForColumns().entrySet()) {
             Optional<TableColumn<BibEntryTableViewModel, ?>> column = this.getColumns().stream().filter(col -> entries.getKey().equals(col.getText())).findFirst();
@@ -108,7 +109,7 @@ public class MainTable extends TableView<BibEntryTableViewModel> {
         }
         this.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
-        this.setItems(model.getEntriesFilteredAndSorted());
+        this.setItems(BindingsHelper.forUI(model.getEntriesFilteredAndSorted()));
         // Enable sorting
         model.getEntriesFilteredAndSorted().comparatorProperty().bind(this.comparatorProperty());
 

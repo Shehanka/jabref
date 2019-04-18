@@ -24,21 +24,27 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.TextInputDialog;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import javafx.util.Duration;
 
-import org.jabref.JabRefGUI;
 import org.jabref.gui.icon.IconTheme;
 import org.jabref.gui.util.DirectoryDialogConfiguration;
 import org.jabref.gui.util.FileDialogConfiguration;
 import org.jabref.gui.util.ZipFileChooser;
 import org.jabref.logic.l10n.Localization;
 
+import com.jfoenix.controls.JFXSnackbar;
+import com.jfoenix.controls.JFXSnackbar.SnackbarEvent;
+import com.jfoenix.controls.JFXSnackbarLayout;
 import org.controlsfx.dialog.ExceptionDialog;
 import org.controlsfx.dialog.ProgressDialog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class provides methods to create default
@@ -49,20 +55,18 @@ import org.controlsfx.dialog.ProgressDialog;
  * rather than complex windows. For more complex dialogs it is
  * advised to rather create a new sub class of {@link FXDialog}.
  */
-public class FXDialogService implements DialogService {
+public class JabRefDialogService implements DialogService {
+    // Snackbar dialog maximum size
+    public static final int DIALOG_SIZE_LIMIT = 300;
 
+    private static final Duration TOAST_MESSAGE_DISPLAY_TIME = Duration.millis(3000);
+    private static final Logger LOGGER = LoggerFactory.getLogger(JabRefDialogService.class);
     private final Window mainWindow;
+    private final JFXSnackbar statusLine;
 
-    /**
-     * @deprecated try not to initialize a new dialog service but reuse the one constructed in {@link org.jabref.gui.JabRefFrame}.
-     */
-    @Deprecated
-    public FXDialogService() {
-        this(null);
-    }
-
-    public FXDialogService(Window mainWindow) {
+    public JabRefDialogService(Window mainWindow, Pane mainPane) {
         this.mainWindow = mainWindow;
+        this.statusLine = new JFXSnackbar(mainPane);
     }
 
     private static FXDialog createDialog(AlertType type, String title, String content) {
@@ -106,6 +110,13 @@ public class FXDialogService implements DialogService {
         return alert;
     }
 
+    public static String shortenDialogMessage(String dialogMessage) {
+        if (dialogMessage.length() < JabRefDialogService.DIALOG_SIZE_LIMIT) {
+            return dialogMessage.trim();
+        }
+        return (dialogMessage.substring(0, Math.min(dialogMessage.length(), JabRefDialogService.DIALOG_SIZE_LIMIT)) + "...").trim();
+    }
+
     @Override
     public <T> Optional<T> showChoiceDialogAndWait(String title, String content, String okButtonLabel, T defaultChoice, Collection<T> choices) {
         ChoiceDialog<T> choiceDialog = new ChoiceDialog<>(defaultChoice, choices);
@@ -115,12 +126,19 @@ public class FXDialogService implements DialogService {
         choiceDialog.setTitle(title);
         choiceDialog.setContentText(content);
         return choiceDialog.showAndWait();
-
     }
 
     @Override
     public Optional<String> showInputDialogAndWait(String title, String content) {
         TextInputDialog inputDialog = new TextInputDialog();
+        inputDialog.setHeaderText(title);
+        inputDialog.setContentText(content);
+        return inputDialog.showAndWait();
+    }
+
+    @Override
+    public Optional<String> showInputDialogWithDefaultAndWait(String title, String content, String defaultValue) {
+        TextInputDialog inputDialog = new TextInputDialog(defaultValue);
         inputDialog.setHeaderText(title);
         inputDialog.setContentText(content);
         return inputDialog.showAndWait();
@@ -253,7 +271,8 @@ public class FXDialogService implements DialogService {
 
     @Override
     public void notify(String message) {
-        JabRefGUI.getMainFrame().output(message);
+        LOGGER.info(message);
+        statusLine.fireEvent(new SnackbarEvent(new JFXSnackbarLayout(message), TOAST_MESSAGE_DISPLAY_TIME, null));
     }
 
     @Override

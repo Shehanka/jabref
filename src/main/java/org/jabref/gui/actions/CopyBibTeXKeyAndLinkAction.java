@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 
 import org.jabref.JabRefGUI;
 import org.jabref.gui.ClipBoardManager;
+import org.jabref.gui.JabRefDialogService;
 import org.jabref.gui.maintable.MainTable;
 import org.jabref.gui.util.DefaultTaskExecutor;
 import org.jabref.logic.l10n.Localization;
@@ -36,7 +37,7 @@ public class CopyBibTeXKeyAndLinkAction implements BaseAction {
             List<BibEntry> entriesWithKey = entries.stream().filter(BibEntry::hasCiteKey).collect(Collectors.toList());
 
             if (entriesWithKey.isEmpty()) {
-                JabRefGUI.getMainFrame().output(Localization.lang("None of the selected entries have BibTeX keys."));
+                JabRefGUI.getMainFrame().getDialogService().notify(Localization.lang("None of the selected entries have BibTeX keys."));
                 return;
             }
 
@@ -46,16 +47,16 @@ public class CopyBibTeXKeyAndLinkAction implements BaseAction {
                 sb.append(url.isEmpty() ? key : String.format("<a href=\"%s\">%s</a>", url, key));
                 sb.append(OS.NEWLINE);
             }
-
-            DefaultTaskExecutor.runInJavaFXThread(() -> clipboardManager.setHtmlContent(sb.toString()));
+            final String keyAndLink = sb.toString();
+            DefaultTaskExecutor.runInJavaFXThread(() -> clipboardManager.setHtmlContent(keyAndLink));
 
             int copied = entriesWithKey.size();
             int toCopy = entries.size();
             if (copied == toCopy) {
                 // All entries had keys.
-                JabRefGUI.getMainFrame().output((entries.size() > 1 ? Localization.lang("Copied keys") : Localization.lang("Copied key")) + '.');
+                JabRefGUI.getMainFrame().getDialogService().notify(Localization.lang("Copied") + " '" + JabRefDialogService.shortenDialogMessage(keyAndLink) + "'.");
             } else {
-                JabRefGUI.getMainFrame().output(Localization.lang("Warning: %0 out of %1 entries have undefined BibTeX key.",
+                JabRefGUI.getMainFrame().getDialogService().notify(Localization.lang("Warning: %0 out of %1 entries have undefined BibTeX key.",
                         Long.toString(toCopy - copied), Integer.toString(toCopy)));
             }
         }
